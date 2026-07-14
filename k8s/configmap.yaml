@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-api-config
+  namespace: fcg
+data:
+  ASPNETCORE_URLS: http://+:8080
+  RabbitMq__Host: rabbitmq
+  Jwt__Issuer: FCG
+  Jwt__Audience: FCG
+  Seed__AdminEmail: admin@fcg.com
