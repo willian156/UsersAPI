@@ -1,3 +1,4 @@
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UsersAPI.Application.Users;
@@ -18,9 +19,7 @@ public class UsersController(ISender sender) : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> List(CancellationToken ct) =>
-        Ok(await sender.Send(new GetUsersQuery(), ct));
-
+    public async Task<IActionResult> List(CancellationToken ct) => Ok(await sender.Send(new GetUsersQuery(), ct));
     [HttpGet("{id:guid}")]
     [Authorize]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct)
@@ -39,19 +38,5 @@ public class UsersController(ISender sender) : ControllerBase
 
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) =>
-        await sender.Send(new DeleteUserCommand { Id = id }, ct) ? NoContent() : NotFound();
-}
-
-[ApiController]
-[Route("auth")]
-public class AuthController(ISender sender) : ControllerBase
-{
-    [HttpPost("login")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Login(LoginDto dto, CancellationToken ct)
-    {
-        var result = await sender.Send(new LoginCommand { Data = dto }, ct);
-        return result is null ? Unauthorized() : Ok(result);
-    }
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct) => await sender.Send(new DeleteUserCommand { Id = id }, ct) ? NoContent() : NotFound();
 }
