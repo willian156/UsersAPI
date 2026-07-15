@@ -1,38 +1,37 @@
 using MassTransit;
-using UsersAPI.Application.Abstractions;
 using UsersAPI.Contracts;
 using UsersAPI.Domain.Users;
 using UsersAPI.Infrastructure.Security;
 
 namespace UsersAPI.Application.Users;
 
-public class RegisterUserCommand : ICommand<UserDto>
+public class RegisterUserCommand : IRequest<UserDto>
 {
     public RegisterUserDto Data { get; set; } = new();
 }
 
-public class LoginCommand : ICommand<LoginResponseDto?>
+public class LoginCommand : IRequest<LoginResponseDto?>
 {
     public LoginDto Data { get; set; } = new();
 }
 
-public class UpdateUserCommand : ICommand<UserDto?>
+public class UpdateUserCommand : IRequest<UserDto?>
 {
     public Guid Id { get; set; }
     public UpdateUserDto Data { get; set; } = new();
 }
 
-public class DeleteUserCommand : ICommand<bool>
+public class DeleteUserCommand : IRequest<bool>
 {
     public Guid Id { get; set; }
 }
 
-public class GetUserByIdQuery : IQuery<UserDto?>
+public class GetUserByIdQuery : IRequest<UserDto?>
 {
     public Guid Id { get; set; }
 }
 
-public class GetUsersQuery : IQuery<IReadOnlyList<UserDto>> { }
+public class GetUsersQuery : IRequest<IReadOnlyList<UserDto>> { }
 
 public static class UserMapping
 {
@@ -51,7 +50,7 @@ public class RegisterUserHandler(
     IUserRepository repository,
     IPasswordHasher hasher,
     IPublishEndpoint publisher
-) : ICommandHandler<RegisterUserCommand, UserDto>
+) : IRequestHandler<RegisterUserCommand, UserDto>
 {
     public async Task<UserDto> Handle(RegisterUserCommand c, CancellationToken ct)
     {
@@ -79,7 +78,7 @@ public class RegisterUserHandler(
 }
 
 public class LoginHandler(IUserRepository repository, IPasswordHasher hasher, ITokenService tokens)
-    : ICommandHandler<LoginCommand, LoginResponseDto?>
+    : IRequestHandler<LoginCommand, LoginResponseDto?>
 {
     public async Task<LoginResponseDto?> Handle(LoginCommand c, CancellationToken ct)
     {
@@ -91,7 +90,7 @@ public class LoginHandler(IUserRepository repository, IPasswordHasher hasher, IT
 }
 
 public class UpdateUserHandler(IUserRepository repository)
-    : ICommandHandler<UpdateUserCommand, UserDto?>
+    : IRequestHandler<UpdateUserCommand, UserDto?>
 {
     public async Task<UserDto?> Handle(UpdateUserCommand c, CancellationToken ct)
     {
@@ -107,7 +106,7 @@ public class UpdateUserHandler(IUserRepository repository)
 }
 
 public class DeleteUserHandler(IUserRepository repository)
-    : ICommandHandler<DeleteUserCommand, bool>
+    : IRequestHandler<DeleteUserCommand, bool>
 {
     public async Task<bool> Handle(DeleteUserCommand c, CancellationToken ct)
     {
@@ -121,7 +120,7 @@ public class DeleteUserHandler(IUserRepository repository)
 }
 
 public class GetUserByIdHandler(IUserRepository repository)
-    : IQueryHandler<GetUserByIdQuery, UserDto?>
+    : IRequestHandler<GetUserByIdQuery, UserDto?>
 {
     public async Task<UserDto?> Handle(GetUserByIdQuery q, CancellationToken ct)
     {
@@ -131,7 +130,7 @@ public class GetUserByIdHandler(IUserRepository repository)
 }
 
 public class GetUsersHandler(IUserRepository repository)
-    : IQueryHandler<GetUsersQuery, IReadOnlyList<UserDto>>
+    : IRequestHandler<GetUsersQuery, IReadOnlyList<UserDto>>
 {
     public async Task<IReadOnlyList<UserDto>> Handle(GetUsersQuery q, CancellationToken ct) =>
         (await repository.GetAllAsync(ct)).Select(UserMapping.ToDto).ToList();

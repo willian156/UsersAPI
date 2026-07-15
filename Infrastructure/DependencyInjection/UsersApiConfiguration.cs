@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using UsersAPI.Application.Abstractions;
 using UsersAPI.Application.Users;
 using UsersAPI.Domain.Users;
 using UsersAPI.Infrastructure.Persistence;
@@ -65,12 +64,9 @@ public static class UsersApiConfiguration
 
     private static void AddUsersApplication(this IServiceCollection services)
     {
-        services.AddScoped<ICommandHandler<RegisterUserCommand, UserDto>, RegisterUserHandler>();
-        services.AddScoped<ICommandHandler<LoginCommand, LoginResponseDto?>, LoginHandler>();
-        services.AddScoped<ICommandHandler<UpdateUserCommand, UserDto?>, UpdateUserHandler>();
-        services.AddScoped<ICommandHandler<DeleteUserCommand, bool>, DeleteUserHandler>();
-        services.AddScoped<IQueryHandler<GetUserByIdQuery, UserDto?>, GetUserByIdHandler>();
-        services.AddScoped<IQueryHandler<GetUsersQuery, IReadOnlyList<UserDto>>, GetUsersHandler>();
+        services.AddMediatR(configuration =>
+            configuration.RegisterServicesFromAssemblyContaining<RegisterUserCommand>()
+        );
     }
 
     private static void AddUsersPersistence(
