@@ -22,6 +22,7 @@ O RabbitMQ deve estar acessível com as variáveis abaixo.
 - `Jwt__ExpiresMinutes`
 - `Seed__AdminEmail`
 - `Seed__AdminPassword`
+- `ConnectionStrings__Database` (PostgreSQL exclusivo do serviço)
 
 ## Docker
 

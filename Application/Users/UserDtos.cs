@@ -1,0 +1,35 @@
+namespace UsersAPI.Application.Users;
+
+public class RegisterUserDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginDto
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class UpdateUserDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = "User";
+}
+
+public class UserDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+public class LoginResponseDto
+{
+    public string Token { get; set; } = string.Empty;
+    public UserDto User { get; set; } = new();
+}
