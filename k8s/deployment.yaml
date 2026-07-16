@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: users-api
-          image: fcg/users-api:latest
+          image: fcg/users-api:cors-v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -23,7 +23,13 @@ spec:
             - configMapRef:
                 name: users-api-config
             - secretRef:
-                name: users-api-secrets
+                name: fcg-secrets
+          env:
+            - name: ConnectionStrings__Database
+              valueFrom:
+                secretKeyRef:
+                  name: fcg-secrets
+                  key: UsersDatabase
           readinessProbe:
             httpGet:
               path: /health

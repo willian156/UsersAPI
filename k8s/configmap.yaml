@@ -4,6 +4,13 @@ metadata:
   name: users-api-config
   namespace: fcg
 data:
+  Cors__AllowedOrigins__0: http://users.fcg.local
+  Cors__AllowedOrigins__1: http://catalog.fcg.local
+  Cors__AllowedOrigins__2: http://payments.fcg.local
+  Cors__AllowedOrigins__3: http://notifications.fcg.local
+  Cors__AllowedOrigins__4: http://localhost:3000
+  Cors__AllowedOrigins__5: http://localhost:5173
+  Cors__AllowedOrigins__6: http://localhost:4200
   ASPNETCORE_URLS: http://+:8080
   RabbitMq__Host: rabbitmq
   Jwt__Issuer: FCG
