@@ -23,6 +23,7 @@ public static class UsersApiConfiguration
         services.AddUsersPersistence(configuration);
         services.AddUsersSecurity(configuration);
         services.AddUsersMessaging(configuration);
+        services.AddApiCors(configuration);
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerWithBearerAuthentication();
@@ -33,10 +34,21 @@ public static class UsersApiConfiguration
     {
         app.UseSwagger();
         app.UseSwaggerUI();
+        app.UseCors("Frontend");
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
         return app;
+    }
+
+    private static void AddApiCors(this IServiceCollection services, IConfiguration configuration)
+    {
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        services.AddCors(options =>
+            options.AddPolicy("Frontend", policy =>
+                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()
+            )
+        );
     }
 
     public static async Task InitializeUsersDatabaseAsync(this WebApplication app)
