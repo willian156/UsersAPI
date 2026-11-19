@@ -11,6 +11,6 @@ public class JwtSettings
 {
     public string Issuer { get; set; } = "FCG";
     public string Audience { get; set; } = "FCG";
-    public string Key { get; set; } = "change-this-development-key-with-32-chars";
+    public string Key { get; set; } = string.Empty;
     public int ExpiresMinutes { get; set; } = 120;
 }

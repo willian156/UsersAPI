@@ -9,6 +9,7 @@ using UsersAPI.Application.Users;
 using UsersAPI.Domain.Users;
 using UsersAPI.Infrastructure.Persistence;
 using UsersAPI.Infrastructure.Security;
+using Prometheus;
 
 namespace UsersAPI.Infrastructure.DependencyInjection;
 
@@ -35,9 +36,11 @@ public static class UsersApiConfiguration
         app.UseSwagger();
         app.UseSwaggerUI();
         app.UseCors("Frontend");
+        app.UseHttpMetrics(options => options.ReduceStatusCodeCardinality());
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
+        app.MapMetrics();
         return app;
     }
 
@@ -55,24 +58,19 @@ public static class UsersApiConfiguration
     {
         using var scope = app.Services.CreateScope();
         var provider = scope.ServiceProvider;
-        await provider.GetRequiredService<UsersDbContext>().Database.EnsureCreatedAsync();
-
-        var repository = provider.GetRequiredService<IUserRepository>();
-        var email = app.Configuration["Seed:AdminEmail"] ?? "admin@fcg.com";
-        if (await repository.GetByEmailAsync(email, CancellationToken.None) is not null)
-            return;
-
-        var password = app.Configuration["Seed:AdminPassword"] ?? "Admin@123";
-        var passwordHasher = provider.GetRequiredService<IPasswordHasher>();
-        repository.Add(
-            User.Create(
-                "Administrador",
-                email,
-                passwordHasher.Hash(password),
-                UserRole.Admin
-            )
-        );
-        await repository.SaveChangesAsync(CancellationToken.None);
+        var database = provider.GetRequiredService<UsersDbContext>();
+        await DatabaseInitialization.RunAsync(database, async () =>
+        {
+            await database.Database.EnsureCreatedAsync();
+            var repository = provider.GetRequiredService<IUserRepository>();
+            var email = app.Configuration["Seed:AdminEmail"]?.Trim().ToLowerInvariant();
+            var password = app.Configuration["Seed:AdminPassword"];
+            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) return;
+            if (await repository.GetByEmailAsync(email, CancellationToken.None) is not null) return;
+            var passwordHasher = provider.GetRequiredService<IPasswordHasher>();
+            repository.Add(User.Create("Administrador", email, passwordHasher.Hash(password), UserRole.Admin));
+            await repository.SaveChangesAsync(CancellationToken.None);
+        });
     }
 
     private static void AddUsersApplication(this IServiceCollection services)
@@ -99,6 +97,8 @@ public static class UsersApiConfiguration
     )
     {
         var jwt = configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+        if (Encoding.UTF8.GetByteCount(jwt.Key) < 32)
+            throw new InvalidOperationException("Configure Jwt:Key com pelo menos 32 bytes por um provedor de segredos.");
         services.AddSingleton(jwt);
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
@@ -132,8 +132,8 @@ public static class UsersApiConfiguration
                         "/",
                         host =>
                         {
-                            host.Username(configuration["RabbitMq:Username"] ?? "guest");
-                            host.Password(configuration["RabbitMq:Password"] ?? "guest");
+                            host.Username(configuration["RabbitMq:Username"] ?? throw new InvalidOperationException("Configure RabbitMq:Username."));
+                            host.Password(configuration["RabbitMq:Password"] ?? throw new InvalidOperationException("Configure RabbitMq:Password."));
                         }
                     )
             )

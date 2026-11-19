@@ -5,7 +5,7 @@ Microsserviço responsável pelo cadastro, autenticação com geração de JWT e
 ## Executar
 
 ```bash
-dotnet run --project UsersAPI.sln
+dotnet run --project UsersAPI.csproj
 ```
 
 O RabbitMQ deve estar acessível com as variáveis abaixo.
@@ -32,6 +32,8 @@ docker build -t fcg/users-api:latest .
 
 ## Kubernetes
 
-```bash
-kubectl apply -f k8s/
-```
+Os manifests ativos ficam no repositório de orquestração, em `k8s/` e `deploy/azure/`. Os arquivos locais de `k8s/` deste repositório são históricos da Fase 3; não os aplique junto da configuração nova. Consulte `docs/DEPLOY_AZURE_DEVOPS.md` na orquestração.
+
+## Fase 4: testes e Azure DevOps
+
+`dotnet test tests/UsersAPI.Tests/UsersAPI.Tests.csproj` executa os testes automatizados. `azure-pipelines.yml` valida PRs e publica a branch main no ACR/AKS com rolling update. Configure o variable group `fcg-production` conforme o tutorial central. Credenciais são obrigatórias via configuração externa; os defaults de senha/chave foram removidos.

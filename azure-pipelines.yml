@@ -1,0 +1,74 @@
+trigger:
+  batch: true
+  branches: { include: [main] }
+pr:
+  branches: { include: [main] }
+pool: { vmImage: ubuntu-latest }
+variables:
+  - group: fcg-production
+  - name: imageTag
+    value: '$(Build.SourceVersion)-$(Build.BuildId)'
+stages:
+  - stage: BuildTest
+    jobs:
+      - job: Validate
+        steps:
+          - checkout: self
+          - task: UseDotNet@2
+            inputs: { packageType: sdk, version: 8.0.x }
+          - script: dotnet restore tests/UsersAPI.Tests/UsersAPI.Tests.csproj
+            displayName: Restore
+          - script: dotnet build UsersAPI.csproj -c Release --no-restore
+            displayName: Build
+          - script: dotnet test tests/UsersAPI.Tests/UsersAPI.Tests.csproj -c Release --no-restore --logger trx --results-directory $(Agent.TempDirectory)/test-results
+            displayName: Unit tests
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: '$(Agent.TempDirectory)/test-results/*.trx'
+              failTaskOnFailedTests: true
+          - script: docker build --pull -t $(acrLoginServer)/users-api:$(imageTag) .
+            displayName: Build versioned image
+          - script: |
+              docker save $(acrLoginServer)/users-api:$(imageTag) -o $(Agent.TempDirectory)/image.tar
+              docker run --rm -v $(Agent.TempDirectory):/scan aquasec/trivy:0.69.3 image --input /scan/image.tar --scanners vuln --severity HIGH,CRITICAL --format json --output /scan/scan.json
+            displayName: Vulnerability report
+          - task: PublishPipelineArtifact@1
+            inputs: { targetPath: '$(Agent.TempDirectory)/scan.json', artifact: security-report }
+          - task: AzureCLI@2
+            condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                az acr login --name "$(acrName)"
+                docker push "$(acrLoginServer)/users-api:$(imageTag)"
+  - stage: Deploy
+    dependsOn: BuildTest
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    lockBehavior: sequential
+    jobs:
+      - deployment: RollingUpdate
+        environment: fcg-production-users-api
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: KubectlInstaller@0
+                  inputs: { kubectlVersion: latest }
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      export KUBECONFIG="$(Agent.TempDirectory)/kubeconfig"
+                      trap 'rm -f "$KUBECONFIG"' EXIT
+                      az aks get-credentials --resource-group "$(resourceGroup)" --name "$(aksName)" --file "$KUBECONFIG" --overwrite-existing
+                      kubectl -n fcg set image deployment/users-api users-api="$(acrLoginServer)/users-api:$(imageTag)"
+                      kubectl -n fcg annotate deployment/users-api kubernetes.io/change-cause="$(Build.SourceVersion)" --overwrite
+                      kubectl -n fcg rollout status deployment/users-api --timeout=300s
